@@ -1,0 +1,9 @@
+pyspark
+findspark
+tensorflow
+torch
+transformers
+scipy
+pandas
+scikit-learn
+numpy
