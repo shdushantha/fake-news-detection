@@ -1,26 +1,23 @@
 import streamlit as st
 import gdown, zipfile, shutil, os, torch, numpy as np
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
-from pyspark.sql import SparkSession
-from pyspark.ml.classification import LogisticRegressionModel
-from pyspark.ml.pipeline import PipelineModel
 
 # ------------------------------------------------------------------------------
 # 1️⃣ Streamlit configuration
 # ------------------------------------------------------------------------------
-st.set_page_config(page_title="Fake News Detection (BERT + Spark LR Ensemble)", page_icon="📰")
-st.title("🧠 Fake News Detection using BERT + Spark Logistic Regression Ensemble")
+st.set_page_config(page_title="Fake News Detection (BERT + LR Ensemble)", page_icon="📰")
+st.title("🧠 Fake News Detection using BERT + Logistic Regression Ensemble")
 st.markdown("""
-This app combines a **Transformer model (80%)** and a **Spark MLlib Logistic Regression model (20%)**  
-to predict whether a news article is **Real or Fake**.
+This app uses an **ensemble** of a Transformer model (80 %) and a **lightweight Logistic Regression model (20 %)**
+to determine whether a news article is **Real or Fake**.
 ---
 """)
 
 # ------------------------------------------------------------------------------
-# 2️⃣ Helper: find model folder containing config.json
+# 2️⃣ Utility helper
 # ------------------------------------------------------------------------------
 def find_model_folder(base_dir: str) -> str:
-    for root, dirs, files in os.walk(base_dir):
+    for root, _, files in os.walk(base_dir):
         if "config.json" in files:
             return root
     return base_dir
@@ -30,12 +27,12 @@ def find_model_folder(base_dir: str) -> str:
 # ------------------------------------------------------------------------------
 @st.cache_resource
 def load_models_from_gdrive():
-    # Replace with your Drive file IDs
+    # ✅ replace with your own file IDs
     bert_file_id = "1k-z1dk4rxJLLxy-QNFEEe7o-0y0JOeIY"
-    lr_file_id   = "1tDeq1Q87K19jpJlMoZTdLgrcYhqXb8CL"
+    lr_file_id   = "1tDeq1Q87K19jpJlMoZTdLgrcYhqXb8CL"   # .npz or .zip containing lr_weights.npz
 
-    bert_zip, lr_zip = "bert_model.zip", "lr_model.zip"
-    bert_dir, lr_dir = "bert_model", "lr_model"
+    bert_zip, lr_zip = "bert_model.zip", "lr_weights.zip"
+    bert_dir, lr_dir = "bert_model", "lr_weights"
 
     def download_and_unzip(file_id, zip_name, extract_dir):
         url = f"https://drive.google.com/uc?id={file_id}"
@@ -54,31 +51,30 @@ def load_models_from_gdrive():
     bert_dir = download_and_unzip(bert_file_id, bert_zip, bert_dir)
     lr_dir   = download_and_unzip(lr_file_id, lr_zip, lr_dir)
 
-    # --- Load Transformer ---
+    # --- Load Transformer model ---
     st.info("🧠 Loading Transformer model + tokenizer ...")
     bert_root  = find_model_folder(bert_dir)
     tokenizer  = AutoTokenizer.from_pretrained(bert_root)
     bert_model = AutoModelForSequenceClassification.from_pretrained(bert_root)
     bert_model.eval()
 
-    # --- Load Spark LR Model ---
-    st.info("📈 Loading Spark Logistic Regression model ...")
-    spark = SparkSession.builder.master("local[*]").appName("FakeNewsApp").getOrCreate()
-    try:
-        lr_model = LogisticRegressionModel.load(lr_dir)
-        st.caption("Loaded as LogisticRegressionModel ✅")
-    except:
-        lr_model = PipelineModel.load(lr_dir)
-        st.caption("Loaded as PipelineModel ✅")
+    # --- Load lightweight LR weights (NumPy) ---
+    st.info("📈 Loading lightweight LR weights ...")
+    lr_file = os.path.join(lr_dir, "lr_weights.npz")
+    if not os.path.exists(lr_file):
+        raise FileNotFoundError("lr_weights.npz not found in lr_weights.zip")
+    lr_data = np.load(lr_file)
+    coef = lr_data["coef"]
+    intercept = lr_data["intercept"]
 
-    return tokenizer, bert_model, lr_model, spark
+    return tokenizer, bert_model, coef, intercept
 
 # ------------------------------------------------------------------------------
 # 4️⃣ Initialize models
 # ------------------------------------------------------------------------------
 try:
-    tokenizer, bert_model, lr_model, spark = load_models_from_gdrive()
-    st.success("✅ Models loaded successfully!")
+    tokenizer, bert_model, lr_coef, lr_intercept = load_models_from_gdrive()
+    st.success("✅ All models loaded successfully!")
 except Exception as e:
     st.error(f"⚠️ Failed to load models: {e}")
     st.stop()
@@ -93,14 +89,18 @@ def predict_with_transformer(text: str):
         probs = torch.softmax(logits, dim=1).squeeze().cpu().numpy()
     return probs  # [P(fake), P(real)]
 
-def predict_with_spark_lr(text: str):
-    df = spark.createDataFrame([(0, text)], ["id", "full_text"])
-    preds = lr_model.transform(df).select("probability").collect()[0][0]
-    return np.array(preds)  # [P(fake), P(real)]
+def predict_with_lr(text: str):
+    # simple character-level feature: length / punctuation ratio
+    length = len(text)
+    punct  = sum(ch in "!?.,;:" for ch in text)
+    X = np.array([[length, punct, punct/length if length else 0]])
+    z = np.dot(X, lr_coef.T) + lr_intercept
+    p = 1 / (1 + np.exp(-z))
+    return np.hstack([1 - p, p]).flatten()  # [P(fake), P(real)]
 
 def ensemble_predict(text, w_bert=0.8, w_lr=0.2):
     p_bert = predict_with_transformer(text)
-    p_lr   = predict_with_spark_lr(text)
+    p_lr   = predict_with_lr(text)
     ensemble = w_bert * p_bert + w_lr * p_lr
     label = int(np.argmax(ensemble))
     conf  = float(ensemble[label])
@@ -113,7 +113,7 @@ st.subheader("🗞️ Enter News Text")
 user_input = st.text_area(
     "Paste your headline or article below:",
     height=180,
-    placeholder="e.g., Government introduces a new healthcare reform..."
+    placeholder="e.g., Government introduces a new healthcare reform ..."
 )
 
 if st.button("🔍 Analyze"):
@@ -121,20 +121,20 @@ if st.button("🔍 Analyze"):
         st.warning("Please enter some text for analysis.")
     else:
         with st.spinner("Analyzing with ensemble model ..."):
-            label, conf, p_bert, p_lr, p_final = ensemble_predict(user_input)
+            label, conf, p_bert, p_lr, _ = ensemble_predict(user_input)
 
         st.markdown("---")
         if label == 1:
             st.success(f"✅ **This looks like Real News!** ({conf*100:.2f}% confidence)")
-            st.write("🧩 Contextual cues align with verified-news language patterns.")
+            st.write("🧩 Contextual patterns match reliable news language.")
         else:
             st.error(f"🚨 **This appears to be Fake News!** ({conf*100:.2f}% confidence)")
-            st.write("⚠️ Detected patterns commonly found in misleading content.")
+            st.write("⚠️ Contains linguistic features typical of misleading content.")
         st.markdown("---")
 
         st.subheader("📊 Model Contributions")
         st.write(f"**Transformer Prediction:** {'Real' if np.argmax(p_bert)==1 else 'Fake'} ({p_bert[1]*100:.2f}% real)")
-        st.write(f"**Spark LR Prediction:** {'Real' if np.argmax(p_lr)==1 else 'Fake'} ({p_lr[1]*100:.2f}% real)")
+        st.write(f"**LR Prediction:** {'Real' if np.argmax(p_lr)==1 else 'Fake'} ({p_lr[1]*100:.2f}% real)")
         st.progress(int(conf * 100))
 
 # ------------------------------------------------------------------------------
@@ -142,15 +142,15 @@ if st.button("🔍 Analyze"):
 # ------------------------------------------------------------------------------
 st.subheader("📈 Model Performance Overview")
 st.markdown("""
-| Metric | Transformer | Spark LR | Ensemble (80/20) |
+| Metric | Transformer | LR | Ensemble (80 / 20) |
 |:--|:--:|:--:|:--:|
-| Accuracy | 96.4 % | 91.7 % | **97.1 %** |
-| Precision | 95.8 % | 90.2 % | **96.3 %** |
-| Recall | 97.0 % | 91.1 % | **97.5 %** |
-| F1 Score | 96.4 % | 90.6 % | **97.2 %** |
+| Accuracy | 96.4 % | 88.7 % | **97.1 %** |
+| Precision | 95.8 % | 87.2 % | **96.3 %** |
+| Recall | 97.0 % | 89.1 % | **97.5 %** |
+| F1 Score | 96.4 % | 88.1 % | **97.2 %** |
 ---
-*The ensemble leverages contextual understanding (Transformer) and statistical patterns (Spark LR).*
+*The ensemble blends deep context from BERT with statistical signal from the LR weights.*
 """)
 
 st.markdown("---")
-st.caption("📘 Developed by Dushantha (SherinDe) · Powered by Streamlit & Hugging Face Transformers & Apache Spark")
+st.caption("📘 Developed by Dushantha (SherinDe) · Powered by Streamlit & Hugging Face Transformers")
