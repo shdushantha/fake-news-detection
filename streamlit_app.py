@@ -28,8 +28,10 @@ def find_model_folder(base_dir: str) -> str:
 @st.cache_resource
 def load_models_from_gdrive():
     # ✅ replace with your own file IDs
-    bert_file_id = "1k-z1dk4rxJLLxy-QNFEEe7o-0y0JOeIY"
-    lr_file_id   = "1tDeq1Q87K19jpJlMoZTdLgrcYhqXb8CL"   # .npz or .zip containing lr_weights.npz
+    # https://drive.google.com/file/d/1Cs9qaSdQnPP6G7EGBs-IQAN0P_axBY0C/view?usp=sharing
+    bert_file_id = "1Cs9qaSdQnPP6G7EGBs-IQAN0P_axBY0C"
+    # https://drive.google.com/file/d/121V7ixr5rFHR7JF2SXYMn0gtjEbMxm9V/view?usp=sharing
+    lr_file_id   = "121V7ixr5rFHR7JF2SXYMn0gtjEbMxm9V"   # .npz or .zip containing lr_weights.npz
 
     bert_zip, lr_zip = "bert_model.zip", "lr_weights.zip"
     bert_dir, lr_dir = "bert_model", "lr_weights"
@@ -154,3 +156,4 @@ st.markdown("""
 
 st.markdown("---")
 st.caption("📘 Developed by Dushantha (SherinDe) · Powered by Streamlit & Hugging Face Transformers")
+
