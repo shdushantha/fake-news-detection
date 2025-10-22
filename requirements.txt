@@ -4,4 +4,3 @@ transformers
 gdown
 numpy
 pandas
-pyspark
