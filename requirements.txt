@@ -4,3 +4,4 @@ transformers
 gdown
 numpy
 pandas
+scikit-learn
