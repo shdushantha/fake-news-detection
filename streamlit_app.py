@@ -1,5 +1,6 @@
 import streamlit as st
 import gdown, zipfile, shutil, os, torch, numpy as np
+import glob
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 
 # ------------------------------------------------------------------------------
@@ -62,12 +63,14 @@ def load_models_from_gdrive():
 
     # --- Load lightweight LR weights (NumPy) ---
     st.info("📈 Loading lightweight LR weights ...")
-    lr_file = os.path.join(lr_dir, "lr_weights.npz")
-    if not os.path.exists(lr_file):
-        raise FileNotFoundError("lr_weights.npz not found in lr_weights.zip")
-    lr_data = np.load(lr_file)
-    coef = lr_data["coef"]
-    intercept = lr_data["intercept"]
+    lr_candidates = glob.glob(os.path.join(lr_dir, "**", "lr_weights.npz"), recursive=True)
+    if not lr_candidates:
+        raise FileNotFoundError("lr_weights.npz not found inside lr_weights.zip")
+    lr_file = lr_candidates[0]
+
+lr_data = np.load(lr_file)
+coef = lr_data["coef"]
+intercept = lr_data["intercept"]
 
     return tokenizer, bert_model, coef, intercept
 
@@ -156,5 +159,6 @@ st.markdown("""
 
 st.markdown("---")
 st.caption("📘 Developed by Dushantha (SherinDe) · Powered by Streamlit & Hugging Face Transformers")
+
 
 
