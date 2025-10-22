@@ -24,11 +24,13 @@ to determine whether a news article is **Real or Fake**.
 """)
 
 # -----------------------------
-# 2️⃣ Download & Load Models
+# 2️⃣ Download & Load Models (Fixed)
 # -----------------------------
 @st.cache_resource
 def load_models_from_gdrive():
-    # Replace with your actual Google Drive File IDs
+    import shutil
+
+    # Google Drive file IDs (✅ keep yours)
     bert_file_id = "1k-z1dk4rxJLLxy-QNFEEe7o-0y0JOeIY"
     lr_file_id = "1tDeq1Q87K19jpJlMoZTdLgrcYhqXb8CL"
 
@@ -38,30 +40,51 @@ def load_models_from_gdrive():
     bert_dir = "bert_model"
     lr_dir = "lr_model"
 
-    # --- Download BERT model ---
-    if not os.path.exists(bert_dir):
-        st.info("📦 Downloading BERT model from Google Drive...")
-        gdown.download(f"https://drive.google.com/uc?id={bert_file_id}", bert_zip, quiet=False)
-        st.info("📂 Extracting BERT model files...")
-        with zipfile.ZipFile(bert_zip, 'r') as zip_ref:
-            zip_ref.extractall(bert_dir)
+    # Utility: download + unzip safely
+    def download_and_unzip(file_id, zip_name, extract_dir):
+        url = f"https://drive.google.com/uc?id={file_id}"
 
-    # --- Download Logistic Regression model ---
-    if not os.path.exists(lr_dir):
-        st.info("📦 Downloading Logistic Regression model from Google Drive...")
-        gdown.download(f"https://drive.google.com/uc?id={lr_file_id}", lr_zip, quiet=False)
-        st.info("📂 Extracting Logistic Regression model files...")
-        with zipfile.ZipFile(lr_zip, 'r') as zip_ref:
-            zip_ref.extractall(lr_dir)
+        # Always download fresh ZIP if missing or 0 bytes
+        if not os.path.exists(zip_name) or os.path.getsize(zip_name) == 0:
+            st.info(f"📦 Downloading {zip_name} from Google Drive...")
+            output = gdown.download(url, zip_name, quiet=False)
+            if output is None or not os.path.exists(zip_name):
+                raise FileNotFoundError(f"Download failed for {zip_name}. Check file ID or link permissions.")
+
+        # Clean up old folder before extracting
+        if os.path.exists(extract_dir):
+            shutil.rmtree(extract_dir)
+
+        st.info(f"📂 Extracting {zip_name}...")
+        with zipfile.ZipFile(zip_name, 'r') as zip_ref:
+            zip_ref.extractall(extract_dir)
+
+        # Double-check extracted folder exists
+        if not os.path.exists(extract_dir):
+            raise FileNotFoundError(f"Extraction failed for {zip_name}")
+
+        return extract_dir
+
+    # --- Download & extract both models ---
+    bert_dir = download_and_unzip(bert_file_id, bert_zip, bert_dir)
+    lr_dir = download_and_unzip(lr_file_id, lr_zip, lr_dir)
 
     # --- Load BERT model ---
+    st.info("🧠 Loading BERT model and tokenizer...")
     tokenizer = BertTokenizer.from_pretrained(bert_dir)
     bert_model = BertForSequenceClassification.from_pretrained(bert_dir)
     bert_model.eval()
 
     # --- Load Logistic Regression model ---
-    lr_model = joblib.load(os.path.join(lr_dir, "model.pkl"))
-    vectorizer = joblib.load(os.path.join(lr_dir, "vectorizer.pkl"))
+    st.info("📈 Loading Logistic Regression model and vectorizer...")
+    lr_model_path = os.path.join(lr_dir, "model.pkl")
+    vec_path = os.path.join(lr_dir, "vectorizer.pkl")
+
+    if not os.path.exists(lr_model_path) or not os.path.exists(vec_path):
+        raise FileNotFoundError("Missing model.pkl or vectorizer.pkl inside lr_model.zip")
+
+    lr_model = joblib.load(lr_model_path)
+    vectorizer = joblib.load(vec_path)
 
     return tokenizer, bert_model, lr_model, vectorizer
 
@@ -72,7 +95,7 @@ try:
 except Exception as e:
     st.error(f"⚠️ Failed to load models: {e}")
     st.stop()
-
+    
 # -----------------------------
 # 3️⃣ Prediction Functions
 # -----------------------------
@@ -151,3 +174,4 @@ st.markdown("""
 # -----------------------------
 st.markdown("---")
 st.markdown("Developed by Dushantha — Powered by Streamlit, Hugging Face Transformers & Scikit")
+
