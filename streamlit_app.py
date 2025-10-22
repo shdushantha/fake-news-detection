@@ -68,9 +68,9 @@ def load_models_from_gdrive():
         raise FileNotFoundError("lr_weights.npz not found inside lr_weights.zip")
     lr_file = lr_candidates[0]
 
-lr_data = np.load(lr_file)
-coef = lr_data["coef"]
-intercept = lr_data["intercept"]
+    lr_data = np.load(lr_file)
+    coef = lr_data["coef"]
+    intercept = lr_data["intercept"]
 
     return tokenizer, bert_model, coef, intercept
 
@@ -159,6 +159,7 @@ st.markdown("""
 
 st.markdown("---")
 st.caption("📘 Developed by Dushantha (SherinDe) · Powered by Streamlit & Hugging Face Transformers")
+
 
 
 
