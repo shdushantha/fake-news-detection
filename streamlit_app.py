@@ -69,11 +69,21 @@ def load_models_from_gdrive():
     bert_dir = download_and_unzip(bert_file_id, bert_zip, bert_dir)
     lr_dir = download_and_unzip(lr_file_id, lr_zip, lr_dir)
 
-    # --- Load BERT model ---
+   # --- Load BERT model ---
     st.info("🧠 Loading BERT model and tokenizer...")
-    tokenizer = BertTokenizer.from_pretrained(bert_dir)
-    bert_model = BertForSequenceClassification.from_pretrained(bert_dir)
+    
+    # find the folder that actually contains config.json
+    def find_model_folder(base_dir):
+        for root, dirs, files in os.walk(base_dir):
+            if "config.json" in files:
+                return root
+        return base_dir  # fallback
+    
+    bert_root = find_model_folder(bert_dir)
+    tokenizer = BertTokenizer.from_pretrained(bert_root)
+    bert_model = BertForSequenceClassification.from_pretrained(bert_root)
     bert_model.eval()
+
 
     # --- Load Logistic Regression model ---
     st.info("📈 Loading Logistic Regression model and vectorizer...")
@@ -174,4 +184,5 @@ st.markdown("""
 # -----------------------------
 st.markdown("---")
 st.markdown("Developed by Dushantha — Powered by Streamlit, Hugging Face Transformers & Scikit")
+
 
