@@ -9,7 +9,7 @@ pandas
 scikit-learn
 numpy
 gdown
-zipfile
 os
 BertTokenizer
 BertForSequenceClassification
+
