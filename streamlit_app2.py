@@ -83,17 +83,21 @@ def load_models():
     st.write(f"📁 Detected LSTM model file: {lstm_model_path}")
     lstm_model = tf.keras.models.load_model(lstm_model_path)
 
-    # Load tokenizer
+   # Load tokenizer
     tok_path = os.path.join(lstm_dir, "tokenizer_lstm.json")
     if not os.path.exists(tok_path):
         for root, _, files in os.walk(lstm_dir):
             if "tokenizer_lstm.json" in files:
                 tok_path = os.path.join(root, "tokenizer_lstm.json")
-                break
+            break
     if not os.path.exists(tok_path):
         raise FileNotFoundError("tokenizer_lstm.json not found in LSTM ZIP")
+
+    # ✅ Correct way: read as string, not dict
     with open(tok_path, "r") as f:
-        tokenizer_lstm = tokenizer_from_json(json.load(f))
+        tokenizer_json = f.read()
+    tokenizer_lstm = tokenizer_from_json(tokenizer_json)
+
 
     # Label encoder
     label_encoder = LabelEncoder()
@@ -171,3 +175,4 @@ if st.button("🔍 Analyze"):
 
 st.markdown("---")
 st.caption("🧠 Developed by Dushantha (SherinDe) · Powered by Streamlit + TensorFlow + Hugging Face")
+
