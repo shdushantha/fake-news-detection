@@ -31,7 +31,8 @@ def find_model_folder(base_dir: str) -> str:
 def load_models_from_gdrive():
     # Replace with your Google Drive file IDs
     bert_file_id = "1k-z1dk4rxJLLxy-QNFEEe7o-0y0JOeIY"
-    lr_file_id   = "1tDeq1Q87K19jpJlMoZTdLgrcYhqXb8CL"
+    # https://drive.google.com/file/d/1LNDmzhzrw8bEyr4EI3wcgs_jNBTo1Hu3/view?usp=sharing
+    lr_file_id   = "1LNDmzhzrw8bEyr4EI3wcgs_jNBTo1Hu3"
 
     bert_zip, lr_zip = "bert_model.zip", "lr_weights.zip"
     bert_dir, lr_dir = "bert_model", "lr_weights"
@@ -162,3 +163,4 @@ st.markdown("""
 
 st.markdown("---")
 st.caption("📘 Developed by Dushantha (SherinDe) · Powered by Streamlit & Hugging Face Transformers")
+
