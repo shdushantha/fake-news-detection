@@ -58,8 +58,8 @@ def load_models():
     # 👉 Replace with your actual Google Drive file IDs
     # https://drive.google.com/file/d/1Cs9qaSdQnPP6G7EGBs-IQAN0P_axBY0C/view?usp=sharing
     bert_file_id = "1Cs9qaSdQnPP6G7EGBs-IQAN0P_axBY0C"
-    # https://drive.google.com/file/d/1GDvAdAnP5zX7Cat7J0AFiKyj0kykIdqj/view?usp=sharing
-    lstm_file_id = "1GDvAdAnP5zX7Cat7J0AFiKyj0kykIdqj"
+    # https://drive.google.com/file/d/1HuS3yobDpACRBKjOHj--SZO1v3TDGcsk/view?usp=sharing
+    lstm_file_id = "1HuS3yobDpACRBKjOHj--SZO1v3TDGcsk"
 
     bert_dir = download_and_unzip(bert_file_id, "bert_model.zip", "bert_model")
     lstm_dir = download_and_unzip(lstm_file_id, "lstm_model.zip", "lstm_model_package")
@@ -175,6 +175,7 @@ if st.button("🔍 Analyze"):
 
 st.markdown("---")
 st.caption("🧠 Developed by Dushantha (SherinDe) · Powered by Streamlit + TensorFlow + Hugging Face")
+
 
 
 
