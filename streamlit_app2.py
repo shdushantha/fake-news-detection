@@ -14,7 +14,7 @@ import torch
 st.set_page_config(page_title="Fake News Detection (BERT + LSTM Ensemble)", page_icon="🧠")
 st.title("📰 Fake News Detection – BERT + LSTM Hybrid")
 st.markdown("""
-This app uses an **ensemble** of a Transformer (**BERT**, 80 %) and an **LSTM** (20 %)  
+This app uses an **ensemble** of a Transformer (**BERT**, 50 %) and an **LSTM** (50 %)  
 to classify whether a news article is **Real** or **Fake**.
 ---
 """)
@@ -135,7 +135,7 @@ def predict_with_lstm(text: str):
     return probs  # [P(fake), P(real)]
 
 
-def ensemble_predict(text, w_bert=0.6, w_lstm=0.4):
+def ensemble_predict(text, w_bert=0.5, w_lstm=0.5):
     """Weighted ensemble between BERT and LSTM predictions"""
     p_bert = predict_with_bert(text)
     p_lstm = predict_with_lstm(text)
@@ -175,5 +175,6 @@ if st.button("🔍 Analyze"):
 
 st.markdown("---")
 st.caption("🧠 Developed by Dushantha (SherinDe) · Powered by Streamlit + TensorFlow + Hugging Face")
+
 
 
