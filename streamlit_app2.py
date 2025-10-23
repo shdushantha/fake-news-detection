@@ -4,6 +4,7 @@ import numpy as np
 import tensorflow as tf
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 from sklearn.preprocessing import LabelEncoder
+import torch
 
 # ---------------------------------------------------------------------
 # 1️⃣ Streamlit page setup
@@ -110,8 +111,12 @@ def predict_with_bert(text: str):
     """Predict using BERT Transformer"""
     inputs = tokenizer(text, return_tensors="pt", truncation=True, padding=True, max_length=256)
     with tf.device("CPU:0"):
-        logits = bert_model(**inputs).logits
-    probs = tf.nn.softmax(logits, axis=1).numpy().squeeze()
+        # Disable gradient tracking for inference
+        with torch.no_grad():
+            logits = bert_model(**inputs).logits
+
+    # Convert safely to numpy
+    probs = torch.nn.functional.softmax(logits, dim=1).detach().cpu().numpy().squeeze()
     return probs  # [P(fake), P(real)]
 
 
@@ -172,3 +177,4 @@ if st.button("🔍 Analyze"):
 
 st.markdown("---")
 st.caption("🧠 Developed by Dushantha (SherinDe) · Powered by Streamlit + TensorFlow + Hugging Face")
+
