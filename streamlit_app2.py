@@ -1,8 +1,10 @@
 import streamlit as st
-import os, zipfile, shutil, gdown
+import os, zipfile, shutil, gdown, json
 import numpy as np
 import tensorflow as tf
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
+from tensorflow.keras.preprocessing.text import tokenizer_from_json
+from tensorflow.keras.preprocessing.sequence import pad_sequences
 from sklearn.preprocessing import LabelEncoder
 import torch
 
@@ -12,16 +14,15 @@ import torch
 st.set_page_config(page_title="Fake News Detection (BERT + LSTM Ensemble)", page_icon="🧠")
 st.title("📰 Fake News Detection – BERT + LSTM Hybrid")
 st.markdown("""
-This app uses an **ensemble** of a Transformer (**BERT**, 80%) and an **LSTM** (20%)  
+This app uses an **ensemble** of a Transformer (**BERT**, 80 %) and an **LSTM** (20 %)  
 to classify whether a news article is **Real** or **Fake**.
 ---
 """)
 
 # ---------------------------------------------------------------------
-# 2️⃣ Utilities: download + extract Google Drive zips
+# 2️⃣ Utilities: download + extract Google Drive ZIPs
 # ---------------------------------------------------------------------
 def download_and_unzip(file_id, zip_name, extract_dir):
-    """Download a ZIP from Google Drive and extract it."""
     url = f"https://drive.google.com/uc?id={file_id}"
     if os.path.exists(extract_dir):
         shutil.rmtree(extract_dir)
@@ -57,12 +58,11 @@ def load_models():
     # 👉 Replace with your actual Google Drive file IDs
     # https://drive.google.com/file/d/1Cs9qaSdQnPP6G7EGBs-IQAN0P_axBY0C/view?usp=sharing
     bert_file_id = "1Cs9qaSdQnPP6G7EGBs-IQAN0P_axBY0C"
-    # https://drive.google.com/file/d/1wW5wk3AtsVwY3WBZcOVshl-4dvuUz7mW/view?usp=sharing
-    lstm_file_id = "1wW5wk3AtsVwY3WBZcOVshl-4dvuUz7mW"
+    # https://drive.google.com/file/d/1GDvAdAnP5zX7Cat7J0AFiKyj0kykIdqj/view?usp=sharing
+    lstm_file_id = "1GDvAdAnP5zX7Cat7J0AFiKyj0kykIdqj"
 
-    # --- Download + extract ---
     bert_dir = download_and_unzip(bert_file_id, "bert_model.zip", "bert_model")
-    lstm_dir = download_and_unzip(lstm_file_id, "lstm_model.zip", "lstm_model")
+    lstm_dir = download_and_unzip(lstm_file_id, "lstm_model.zip", "lstm_model_package")
 
     # --- Load BERT ---
     st.info("🧠 Loading BERT model + tokenizer …")
@@ -72,33 +72,38 @@ def load_models():
     bert_model = AutoModelForSequenceClassification.from_pretrained(bert_dir_actual)
     bert_model.eval()
 
-    # --- Load LSTM (.keras) ---
-    st.info("🔁 Loading LSTM model (.keras format) …")
-
-    keras_files = []
-    for root, _, files in os.walk(lstm_dir):
-        for f in files:
-            if f.endswith(".keras"):
-                keras_files.append(os.path.join(root, f))
-
+    # --- Load LSTM (.keras + tokenizer) ---
+    st.info("🔁 Loading LSTM model (.keras + tokenizer) …")
+    keras_files = [os.path.join(root, f)
+                   for root, _, files in os.walk(lstm_dir)
+                   for f in files if f.endswith(".keras")]
     if not keras_files:
         raise FileNotFoundError("No .keras file found inside LSTM directory!")
-
     lstm_model_path = keras_files[0]
     st.write(f"📁 Detected LSTM model file: {lstm_model_path}")
-
     lstm_model = tf.keras.models.load_model(lstm_model_path)
-    st.success("✅ LSTM model loaded successfully!")
 
-    # --- Label encoder ---
+    # Load tokenizer
+    tok_path = os.path.join(lstm_dir, "tokenizer_lstm.json")
+    if not os.path.exists(tok_path):
+        for root, _, files in os.walk(lstm_dir):
+            if "tokenizer_lstm.json" in files:
+                tok_path = os.path.join(root, "tokenizer_lstm.json")
+                break
+    if not os.path.exists(tok_path):
+        raise FileNotFoundError("tokenizer_lstm.json not found in LSTM ZIP")
+    with open(tok_path, "r") as f:
+        tokenizer_lstm = tokenizer_from_json(json.load(f))
+
+    # Label encoder
     label_encoder = LabelEncoder()
     label_encoder.classes_ = np.array(["Fake", "Real"])
 
-    return tokenizer, bert_model, lstm_model, label_encoder
+    return tokenizer, bert_model, lstm_model, tokenizer_lstm, label_encoder
 
 
 try:
-    tokenizer, bert_model, lstm_model, label_encoder = load_models()
+    tokenizer, bert_model, lstm_model, tokenizer_lstm, label_encoder = load_models()
     st.success("✅ All models loaded successfully!")
 except Exception as e:
     st.error(f"⚠️ Model loading failed: {e}")
@@ -110,35 +115,24 @@ except Exception as e:
 def predict_with_bert(text: str):
     """Predict using BERT Transformer"""
     inputs = tokenizer(text, return_tensors="pt", truncation=True, padding=True, max_length=256)
-    with tf.device("CPU:0"):
-        # Disable gradient tracking for inference
-        with torch.no_grad():
-            logits = bert_model(**inputs).logits
-
-    # Convert safely to numpy
+    with torch.no_grad():  # disable gradients
+        logits = bert_model(**inputs).logits
     probs = torch.nn.functional.softmax(logits, dim=1).detach().cpu().numpy().squeeze()
     return probs  # [P(fake), P(real)]
 
 
 def predict_with_lstm(text: str):
-    """Predict using LSTM model (assuming text preprocessing is built into model)."""
-    try:
-        # If your LSTM expects plain text input, wrap it as a list
-        probs = lstm_model.predict([text], verbose=0).flatten()
-    except Exception:
-        # Some models may require tokenized or embedded input; handle fallback
-        st.warning("⚠️ Could not pass raw text to LSTM; using default dummy feature representation.")
-        x = np.array([[len(text)]])
-        probs = lstm_model.predict(x, verbose=0).flatten()
-
-    # Ensure output is a probability-like pair
+    """Predict using LSTM model and tokenizer"""
+    seq = tokenizer_lstm.texts_to_sequences([text])
+    padded = pad_sequences(seq, maxlen=200, padding='post', truncating='post')
+    probs = lstm_model.predict(padded, verbose=0).flatten()
     if probs.size == 1:
         probs = np.array([1 - probs[0], probs[0]])
     return probs  # [P(fake), P(real)]
 
 
 def ensemble_predict(text, w_bert=0.8, w_lstm=0.2):
-    """Weighted ensemble between BERT and LSTM predictions."""
+    """Weighted ensemble between BERT and LSTM predictions"""
     p_bert = predict_with_bert(text)
     p_lstm = predict_with_lstm(text)
     ensemble = w_bert * p_bert + w_lstm * p_lstm
@@ -177,4 +171,3 @@ if st.button("🔍 Analyze"):
 
 st.markdown("---")
 st.caption("🧠 Developed by Dushantha (SherinDe) · Powered by Streamlit + TensorFlow + Hugging Face")
-
