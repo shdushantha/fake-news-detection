@@ -135,7 +135,7 @@ def predict_with_lstm(text: str):
     return probs  # [P(fake), P(real)]
 
 
-def ensemble_predict(text, w_bert=0.8, w_lstm=0.2):
+def ensemble_predict(text, w_bert=0.6, w_lstm=0.4):
     """Weighted ensemble between BERT and LSTM predictions"""
     p_bert = predict_with_bert(text)
     p_lstm = predict_with_lstm(text)
@@ -175,4 +175,5 @@ if st.button("🔍 Analyze"):
 
 st.markdown("---")
 st.caption("🧠 Developed by Dushantha (SherinDe) · Powered by Streamlit + TensorFlow + Hugging Face")
+
 
