@@ -70,9 +70,21 @@ def load_models():
 
     # --- Load CNN (.h5 only) ---
     st.info("🔁 Loading CNN model (.h5 file only) …")
-    cnn_model_path = os.path.join(cnn_dir, "cnn_model.h5")
-    if not os.path.exists(cnn_model_path):
+
+    # Recursively search for cnn_model.h5
+    cnn_model_path = None
+    for root, _, files in os.walk(cnn_dir):
+        for f in files:
+            if f.lower() == "cnn_model.h5":
+                cnn_model_path = os.path.join(root, f)
+            break
+        if cnn_model_path:
+        break
+
+    if not cnn_model_path or not os.path.exists(cnn_model_path):
         raise FileNotFoundError("cnn_model.h5 not found inside fake_news_cnn_model.zip")
+
+    st.write(f"📁 Detected CNN model file: {cnn_model_path}")
     cnn_model = tf.keras.models.load_model(cnn_model_path)
 
     # Label encoder (for display)
