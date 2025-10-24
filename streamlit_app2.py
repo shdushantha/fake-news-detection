@@ -116,5 +116,27 @@ if st.button("🔍 Analyze"):
         st.write(f"**Real:** {probs[1]*100:.2f}%")
         st.progress(int(confidence * 100))
 
+        # -----------------------------------------------------------------
+        # 🥧 Add pie chart visualization
+        # -----------------------------------------------------------------
+        st.subheader("🎯 Probability Distribution")
+        labels = ["Fake", "Real"]
+        colors = ["#FF6F61", "#4CAF50"]
+        explode = (0.05, 0.05)  # separate slices slightly
+        fig, ax = plt.subplots()
+        ax.pie(
+            probs,
+            labels=labels,
+            autopct='%1.1f%%',
+            startangle=140,
+            colors=colors,
+            explode=explode,
+            shadow=True,
+            textprops={"fontsize": 12, "weight": "bold"}
+        )
+        ax.axis("equal")  # Equal aspect ratio ensures pie is circular
+        st.pyplot(fig)
+
 st.markdown("---")
 st.caption("🧠 Developed by Dushantha (SherinDe) · Powered by Streamlit + Hugging Face Transformers")
+
