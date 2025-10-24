@@ -1,7 +1,7 @@
 import streamlit as st
 import os, zipfile, shutil, gdown
-import numpy as np
 import torch
+import numpy as np
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 
 # ---------------------------------------------------------------------
@@ -16,10 +16,10 @@ to classify whether a news article is **Real** or **Fake**.
 """)
 
 # ---------------------------------------------------------------------
-# 2️⃣ Utilities: download + extract Google Drive ZIP
+# 2️⃣ Helper functions
 # ---------------------------------------------------------------------
 def download_and_unzip(file_id, zip_name, extract_dir):
-    """Download and extract a ZIP file from Google Drive."""
+    """Download and extract model ZIP from Google Drive."""
     url = f"https://drive.google.com/uc?id={file_id}"
     if os.path.exists(extract_dir):
         shutil.rmtree(extract_dir)
@@ -33,37 +33,39 @@ def download_and_unzip(file_id, zip_name, extract_dir):
     with zipfile.ZipFile(zip_name, "r") as zf:
         zf.extractall(extract_dir)
 
-    if not os.path.exists(extract_dir) or len(os.listdir(extract_dir)) == 0:
-        raise FileNotFoundError(f"❌ Extraction failed: {extract_dir}")
-
     st.success(f"✅ Extracted {zip_name} → {extract_dir}")
     return extract_dir
 
 
-def find_model_folder(base_dir: str) -> str:
-    """Recursively find the folder containing config.json and model weights."""
+def find_bert_folder(base_dir: str):
+    """
+    Recursively find the folder that contains both:
+    - config.json
+    - a *.bin model file (like pytorch_model.bin)
+    """
     for root, _, files in os.walk(base_dir):
-        if "config.json" in files and any(f.endswith(".bin") for f in files):
+        has_config = "config.json" in files
+        has_bin = any(f.endswith(".bin") for f in files)
+        if has_config and has_bin:
             return root
-    raise FileNotFoundError("config.json or .bin file not found under " + base_dir)
+    raise FileNotFoundError("❌ Could not locate config.json or .bin file in extracted model folder structure.")
 
 # ---------------------------------------------------------------------
-# 3️⃣ Load BERT model and tokenizer (cached)
+# 3️⃣ Load BERT model + tokenizer (cached)
 # ---------------------------------------------------------------------
 @st.cache_resource
 def load_bert_model():
-    # 👉 Replace this with your actual Google Drive file ID
     # https://drive.google.com/file/d/1Cs9qaSdQnPP6G7EGBs-IQAN0P_axBY0C/view?usp=sharing
     bert_file_id = "1Cs9qaSdQnPP6G7EGBs-IQAN0P_axBY0C"
 
-    # Download and extract model ZIP
+    # Download and extract
     bert_dir = download_and_unzip(bert_file_id, "bert_model.zip", "bert_model")
 
-    # Find actual model directory
-    bert_model_dir = find_model_folder(bert_dir)
+    # Automatically find actual model folder
+    bert_model_dir = find_bert_folder(bert_dir)
     st.write(f"📁 Detected BERT directory: {bert_model_dir}")
 
-    # Load tokenizer and model
+    # Load model + tokenizer
     tokenizer = AutoTokenizer.from_pretrained(bert_model_dir)
     model = AutoModelForSequenceClassification.from_pretrained(bert_model_dir)
     model.eval()
@@ -82,7 +84,7 @@ except Exception as e:
 # 4️⃣ Prediction function
 # ---------------------------------------------------------------------
 def predict_with_bert(text: str):
-    """Predict Fake vs Real using BERT."""
+    """Run prediction using the BERT model."""
     inputs = tokenizer(text, return_tensors="pt", truncation=True, padding=True, max_length=256)
     with torch.no_grad():
         logits = bert_model(**inputs).logits
