@@ -79,7 +79,7 @@ def load_models():
                 cnn_model_path = os.path.join(root, f)
                 break
         if cnn_model_path:
-        break
+            break
 
     if not cnn_model_path or not os.path.exists(cnn_model_path):
         raise FileNotFoundError("cnn_model.h5 not found inside fake_news_cnn_model.zip")
