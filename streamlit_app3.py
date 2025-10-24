@@ -77,7 +77,7 @@ def load_models():
         for f in files:
             if f.lower() == "cnn_model.h5":
                 cnn_model_path = os.path.join(root, f)
-            break
+                break
         if cnn_model_path:
         break
 
