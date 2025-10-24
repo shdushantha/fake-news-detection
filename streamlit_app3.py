@@ -41,29 +41,26 @@ def download_and_unzip(file_id, zip_name, extract_dir):
 
 
 def find_model_folder(base_dir: str) -> str:
-    """Find the directory containing BERT's config.json."""
+    """Recursively find the folder containing both config.json and pytorch_model.bin."""
     for root, _, files in os.walk(base_dir):
-        if "config.json" in files and "pytorch_model.bin" in files:
+        if "config.json" in files and any(f.endswith(".bin") for f in files):
             return root
-    raise FileNotFoundError("config.json or pytorch_model.bin not found in extracted ZIP.")
+    raise FileNotFoundError("config.json or .bin file not found anywhere under " + base_dir)
 
-# ---------------------------------------------------------------------
-# 3️⃣ Load BERT Model + Tokenizer (cached)
-# ---------------------------------------------------------------------
+
 @st.cache_resource
 def load_bert_model():
-    # ⚠️ Replace with your actual Google Drive file ID
     # https://drive.google.com/file/d/1Cs9qaSdQnPP6G7EGBs-IQAN0P_axBY0C/view?usp=sharing
     bert_file_id = "1Cs9qaSdQnPP6G7EGBs-IQAN0P_axBY0C"
 
-    # Download + extract
+    # Download and extract
     bert_dir = download_and_unzip(bert_file_id, "bert_model.zip", "bert_model")
 
-    # Find model folder dynamically
+    # Dynamically locate model folder
     bert_model_dir = find_model_folder(bert_dir)
     st.write(f"📁 Detected BERT directory: {bert_model_dir}")
 
-    # Load model and tokenizer
+    # Load tokenizer and model from that directory
     tokenizer = AutoTokenizer.from_pretrained(bert_model_dir)
     model = AutoModelForSequenceClassification.from_pretrained(bert_model_dir)
     model.eval()
