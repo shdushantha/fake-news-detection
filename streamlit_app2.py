@@ -55,7 +55,8 @@ def find_bert_folder(base_dir: str):
 # ---------------------------------------------------------------------
 @st.cache_resource
 def load_bert_model():
-    # https://drive.google.com/file/d/1Cs9qaSdQnPP6G7EGBs-IQAN0P_axBY0C/view?usp=sharing
+    # 🔹 Replace this with your actual Google Drive file ID
+	# https://drive.google.com/file/d/1Cs9qaSdQnPP6G7EGBs-IQAN0P_axBY0C/view?usp=sharing
     bert_file_id = "1Cs9qaSdQnPP6G7EGBs-IQAN0P_axBY0C"
 
     # Download and extract
