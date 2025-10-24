@@ -2,6 +2,7 @@ import streamlit as st
 import os, zipfile, shutil, gdown
 import torch
 import numpy as np
+import matplotlib.pyplot as plt
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 
 # ---------------------------------------------------------------------
@@ -139,4 +140,5 @@ if st.button("🔍 Analyze"):
 
 st.markdown("---")
 st.caption("🧠 Developed by Dushantha (SherinDe) · Powered by Streamlit + Hugging Face Transformers")
+
 
