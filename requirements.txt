@@ -1,8 +1,5 @@
 streamlit
 torch
 transformers
-tensorflow
 numpy
-pandas
-scikit-learn
 gdown
