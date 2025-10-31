@@ -4,12 +4,11 @@ This project implements a sophisticated fake news detection system using a combi
 
 ## 📝 Description
 
-The goal of this project is to accurately classify news articles as either "True" or "Fake". The notebook processes a large dataset of news articles, engineers features, and trains two distinct models:
+The goal of this project is to accurately classify news articles as either "True" or "Fake". The notebook processes a large dataset of news articles, engineers features, and trains a BERT (DistilBERT) model:
 
-1.  A baseline **Logistic Regression** model using PySpark's MLlib for scalable, traditional machine learning.
-2.  An advanced **DistilBERT** model, a lighter and faster version of BERT, fine-tuned for the specific task of news classification.
+An advanced **DistilBERT** model, a lighter and faster version of BERT, fine-tuned for the specific task of news classification.
 
-Finally, the predictions from both models are combined in a weighted ensemble, leveraging the strengths of both approaches to produce a highly accurate final prediction. The entire workflow, from data ingestion to a real-time prediction function, is demonstrated.
+The entire workflow, from data ingestion to a real-time prediction function, is demonstrated.
 
 ## 🛠️ Core Technologies
 
@@ -45,20 +44,14 @@ The notebook follows these key steps:
    
 3. Text Preprocessing: Cleans the text by converting it to lowercase and removing non-alphabetic characters.
 4. Train-Test Split: Splits the dataset into an 80% training set and a 20% testing set.
-5. 5. Model 1: Baseline Logistic Regression (Spark MLlib):
-    An ML Pipeline is constructed using Tokenizer, StopWordsRemover, HashingTF, and IDF to convert text into numerical features.
-    A Logistic Regression model is trained on these features.
-
-6. Model 2: Fine-Tuning DistilBERT (Hugging Face):
+5. Model : Fine-Tuning DistilBERT (Hugging Face):
     The training and testing data are converted to Pandas DataFrames.
     A pre-trained distilbert-base-uncased model and its tokenizer are loaded.
     The model is fine-tuned on the training dataset for 1 epoch.
 
-7. Model Saving: Both the trained Spark MLlib pipeline and the fine-tuned BERT model are saved to disk for later use.
-8. Ensemble & Evaluation:
-    Probabilities are predicted for the test set from both models.
-    A final prediction is made by calculating a weighted average of the probabilities (80% BERT, 20% Logistic Regression).
-    The ensemble model's performance is evaluated.
+6. Model Saving: Both the trained Spark MLlib pipeline and the fine-tuned BERT model are saved to disk for later use.
+7. Ensemble & Evaluation:
+    Probabilities are predicted for the test set trained model.
    
 ## ✨ Results
 
@@ -67,7 +60,6 @@ Example Usage:
 
 ```bash
 Model	AUC Score	Final Accuracy
-Baseline (Logistic Regression)	0.9982	-
 Final Ensemble Model	1.0000	99.89%
 ```
 
