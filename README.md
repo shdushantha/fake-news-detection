@@ -49,9 +49,7 @@ The notebook follows these key steps:
     A pre-trained distilbert-base-uncased model and its tokenizer are loaded.
     The model is fine-tuned on the training dataset for 1 epoch.
 
-6. Model Saving: Both the trained Spark MLlib pipeline and the fine-tuned BERT model are saved to disk for later use.
-7. Ensemble & Evaluation:
-    Probabilities are predicted for the test set trained model.
+6. Model Saving: Fine-tuned BERT model is saved to google drive for later use.
    
 ## ✨ Results
 
