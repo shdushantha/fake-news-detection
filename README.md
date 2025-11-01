@@ -13,7 +13,7 @@ The entire workflow, from data ingestion to a real-time prediction function, is 
 ## 🛠️ Core Technologies
 
 -   **Big Data Processing**: Apache Spark (PySpark)
--   **Machine Learning**: Spark MLlib, Scikit-learn
+-   **Machine Learning**: Sklearn
 -   **Deep Learning / NLP**: PyTorch, Hugging Face Transformers (DistilBERT)
 -   **Data Manipulation**: Pandas, NumPy
 -   **Environment**: Google Colab with GPU acceleration
