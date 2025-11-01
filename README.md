@@ -62,7 +62,7 @@ Final Ensemble Model	1.0000	99.89%
 ```
 
 ## 🤖 Inference Function
-The notebook includes a function predict_news(news_text) that loads the saved models and classifies any given news text in real-time.
+The notebook includes a function predict_news(news_text) that loads the saved model and classifies any given news text in real-time.
 
 Example Usage:
 ```bash
